@@ -67,21 +67,24 @@ class WebcomicComponent implements Component {
 
     public function register(ComponentManager $manager) {
         $this->initialize();
-        $manager->add_action('init', $this, 'register_post_type', 10);
-        $manager->add_action('admin_menu', $this, 'add_management_page');
-        $manager->add_action('pre_get_posts', $this, 'include_posts');
-        $manager->add_filter("sanitize_option_{$this->get_options_id()}", $this, 'filter_options');
+
+        $manager->add_action('@register_post_types', [ $this, 'register_post_type' ]);
+        $manager->add_action('admin_menu', [ $this, 'add_management_page' ]);
+        $manager->add_action('pre_get_posts', [ $this, 'include_posts' ]);
+        $manager->add_filter("@sanitize_option_{$this->get_options_id()}", [ $this, 'filter_options' ]);
+
         $manager->add_component($this->chapters);
         $manager->add_component($this->attachment);
     }
 
-    public function register_post_type() {
-        $singular_name = $this->get_option('singular_name', 'Comic');
-        $plural_name = $this->get_option('plural_name', 'Comics');
+    public function register_post_type(ComponentManager $manager) {
+        $title = $this->get_option('title', 'Webcomic');
+        $plural_name = "$title Comics";
+        $singular_name = "$title Comic";
 
         register_post_type($this->id, [
             'labels' => [
-                'name' => $plural_name,
+                'name' => $title,
                 'singular_name' => $singular_name,
                 'add_new_item' => "Add New $singular_name",
                 'edit_item' => "Edit $singular_name",
@@ -107,7 +110,12 @@ class WebcomicComponent implements Component {
                 $this->chapters->get_taxonomy_name()
             ],
             'has_archive' => true,
-            'show_in_rest' => true
+            'show_in_rest' => true,
+            'rewrite' => [
+                'slug' => $this->get_slug(),
+                'with_front' => true,
+                'pages' => true
+            ]
         ]);
     }
 
@@ -131,42 +139,53 @@ class WebcomicComponent implements Component {
         }
     }
 
-    // Todo: Replace "singular_name" and "pluarl_name" with "Title"
-    public function filter_options($options) {
-        $options['singular_name'] = sanitize_text_field($options['singular_name']);
-        if (!$options['singular_name']) {
-            $options['singular_name'] = $this->id;
+    public function filter_options($options, ComponentManager $manager) {
+        $sanatize = function ($key, $def) use ($options) {
+            $value = sanitize_text_field($options[$key]);
+            if (!$value) {
+                return $def;
+            }
+            return $value;
+        };
+
+        $title = $sanatize('title', $this->id);
+        $description = $sanatize('description', '');
+        $slug = $sanatize('slug', $this->get_post_type());
+
+        if ($slug != $this->get_slug()) {
+            $manager->do_action('request_rewrite');
         }
-        $options['plural_name'] = sanitize_text_field($options['plural_name']);
-        if (!$options['plural_name']) {
-            $options['plural_name'] = $options['singular_name'] . 's';
-        }
-        return [
-            'plural_name' => $options['plural_name'],
-            'singular_name' => $options['singular_name']
-        ];
+
+        $manager->do_action('add_notice', NoticeComponent::SUCCESS, "$title options updated");
+
+        return compact('title', 'description', 'slug');
     }
 
     public function add_management_page() {
         $id = $this->get_component_id();
         $page = "{$id}_settings";
 
-        $this->register_setting();
+        $this->register_setting($id);
         $this->add_settings_section($page, 'general', 'General', [
-            'singular_name' => [ 
-                'label' => 'Name',
-                'description' => 'The name that will be displayed for this webcomic.'
+            'title' => [ 
+                'label' => 'Title',
+                'description' => 'The name of this webcomic.'
             ],
-            'plural_name' => [
-                'label' => 'Plural Name',
-                'description' => 'The plural name for this webcomic'
+            'slug' => [ 
+                'label' => 'Slug',
+                'description' => 'The slug for this webcomic. Will flush rewrite rules if changed.'
+            ],
+            'description' => [
+                'label' => 'Description',
+                'description' => 'The description of this webcomic',
+                'kind' => 'textarea'
             ]
         ]);
 
         add_submenu_page(
             "edit.php?post_type={$this->get_post_type()}",
-            $this->get_plural_name(),
-            "Manage {$this->get_plural_name()}",
+            $this->get_title(),
+            "Manage {$this->get_title()}",
             'manage_options',
             $page,
             [ $this, 'render' ]
@@ -177,7 +196,7 @@ class WebcomicComponent implements Component {
         $id = $this->get_component_id();
         ?>
             <div class="wrap">
-                <h2 class="wp-heading-inline"><?= esc_html($this->get_plural_name(), 'inky') ?></h2>
+                <h2 class="wp-heading-inline"><?= esc_html($this->get_title(), 'inky') ?></h2>
                 <hr class="wp-header-end">
                 <form action="options.php" method="post">
                     <?php settings_fields($id) ?>

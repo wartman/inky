@@ -23,7 +23,7 @@ class ChapterTaxonomyComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $manager->add_action('init', $this, 'register_taxonomy');
+        $manager->add_action('init', [ $this, 'register_taxonomy' ]);
     }
 
     public function register_taxonomy() {

@@ -38,8 +38,9 @@ class WebcomicBuilder implements Component {
         $options->commit();
 
         $primary_webcomic = new WebcomicComponent('webcomic');
-        $primary_webcomic->set_option('singular_name', 'Comic');
-        $primary_webcomic->set_option('plural_name', 'Comics');
+        $primary_webcomic->set_option('title', 'Webcomic');
+        $primary_webcomic->set_option('description', 'Just another webcomic');
+        $primary_webcomic->set_option('slug', 'webcomic');
         $primary_webcomic->commit();
 
         $manager->add_component($primary_webcomic);

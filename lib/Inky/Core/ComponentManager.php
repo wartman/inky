@@ -18,6 +18,7 @@ class ComponentManager {
         return $manager;
     }
 
+    protected $custom_actions = [];
     protected $id;
     protected $actions = [];
     protected $filters = [];
@@ -26,6 +27,9 @@ class ComponentManager {
 
     public function __construct($id = null) {
         if ($id) $this->id = $id;
+        $this->register_action('@register_post_types');
+        $this->register_action('@after_register_post_types');
+        $this->register_action('@run');
     }
 
     public function set_id($id) {
@@ -37,12 +41,8 @@ class ComponentManager {
         return $this->id;
     }
 
-    public function on_init(Component $component, $cb) {
-        if ($this->in_init) {
-            call_user_func_array([ $component, $cb ], [ $this ]);
-            return;
-        }
-        $this->add_action($this->id . '_init', $component, $cb, 10, 1);
+    public function get_plugin_file() {
+        return dirname(dirname(__DIR__)) . DIRECTORY_SEPARATOR . 'inky.php';
     }
 
     /**
@@ -55,7 +55,7 @@ class ComponentManager {
      * @return $this
      */
     public function add_component(Component $component) {
-        $id = $this->resolve_id(
+        $id = $this->format_id(
             get_class($component), $component->get_component_id()
         );
 
@@ -85,7 +85,7 @@ class ComponentManager {
      * @return Component|null
      */
     public function get_component($type, $id = null) {
-        $id = $this->resolve_id($type, $id);
+        $id = $this->format_id($type, $id);
         return $this->has_component($id) ? $this->components[$id] : null;
     }
 
@@ -97,8 +97,31 @@ class ComponentManager {
      * @return bool
      */
     public function has_component($type, $id = null) {
-        $id = $this->resolve_id($type, $id);
+        $id = $this->format_id($type, $id);
         return isset($this->components[$id]);
+    }
+
+    /**
+     * Register a custom action. 
+     * 
+     * Registered actions will be prefixed with this manager's ID, ensuring there
+     * won't be any conflicts.
+     * 
+     * @param string $name The name of the action.
+     * @param string|false $during The name of the Wordpress action to fire this action during.
+     *                             If `false`, will not be registered and you'll have to fire 
+     *                             it yourself.
+     * @return $this
+     */
+    public function register_action($name, $during = false) {
+        $this->custom_actions[] = $name;
+        if ($during === false) {
+            return $this;
+        }
+        $this->add_action($during, function() use ($name) {
+            $this->do_action($name);
+        });
+        return $this;
     }
 
     /** 
@@ -106,33 +129,39 @@ class ComponentManager {
      *
      * Actions added this way will NOT be registered with wordpress until
      * `ComponentManager::run()` is called.
+     * 
+     * Actions prefixed with `@` are injected actions -- they are run where the normal
+     * action would be (unless they are a custom action, registerd with `register_action`), 
+     * but receive an instance of `ComponentManager` as their last argument.
      *
      * @param string $hook
-     * @param Component $component
-     * @param string $callback This must be a method in the provided component.
+     * @param Callable $callback
      * @param int $priority
      * @param int $accepted_args
      * @return $this
      */
-    public function add_action($hook, Component $component, $callback, $priority = 10, $accepted_args = 1) {
-        if ($this->in_init && $hook == 'init') {
-            call_user_func_array([ $component, $callback ], []);
-            return $this;
-        }
-        $this->actions[] = compact('hook', 'component', 'callback', 'priority', 'accepted_args');
+    public function add_action($hook, Callable $callback, $priority = 10, $accepted_args = 1) {
+        $is_injected = $this->should_inject($hook);
+        $hook = $this->format_action_name($hook);
+        $this->actions[] = compact('hook', 'callback', 'priority', 'accepted_args', 'is_injected');
         return $this;
     }
 
     /**
      * Register a filter for the given component.
      *
+     * Filters prefixed with `@` are injected filters --They are run where
+     * the un-scoped filter would be, but this `ComponentManager` is injected
+     * as the last param.
+     * 
      * @param string $name
-     * @param Component $component
-     * @param string $callback This must be a method in the provided component.
+     * @param Callable $callback
      * @return $this
      */
-    public function add_filter($name, Component $component, $callback) {
-        $this->filters[] = compact('name', 'component', 'callback');
+    public function add_filter($name, Callable $callback) {
+        $is_injected = $this->should_inject($name);
+        $name = $this->format_filter_name($name);
+        $this->filters[] = compact('name', 'callback', 'is_injected');
         return $this;
     }
 
@@ -143,12 +172,30 @@ class ComponentManager {
      */
     public function commit() {
         foreach ($this->actions as $action) {
-            add_action($action['hook'], [$action['component'], $action['callback']], $action['priority'], $action['accepted_args']);
+            $callback = $action['callback'];
+            if ($action['is_injected']) {
+                add_action($action['hook'], function () use ($callback) {
+                    $args = func_get_args();
+                    $args[] = $this;
+                    call_user_func_array($callback, $args);
+                }, $action['priority'], $action['accepted_args'] - 1);
+            } else {
+                add_action($action['hook'], $callback, $action['priority'], $action['accepted_args']);
+            }
         }
         $this->actions = [];
         
         foreach ($this->filters as $filter) {
-            add_filter($filter['name'], [$filter['component'], $filter['callback']]);
+            $callback = $filter['callback'];
+            if ($filter['is_injected']) {
+                add_filter($filter['name'], function () use ($callback) {
+                    $args = func_get_args();
+                    $args[] = $this;
+                    return call_user_func_array($callback, $args);
+                });
+            } else {
+                add_filter($filter['name'], $callback);
+            }
         }
         $this->filters = [];
 
@@ -164,15 +211,78 @@ class ComponentManager {
         $this->commit();
         
         add_action('init', function () {
-            $this->in_init = true;
-            do_action($this->id . '_init', $this);
-            $this->in_init = false;
-        }, 15);
+            $this->do_action('@run');
+            $this->do_action('@register_post_types');
+            $this->do_action('@after_register_post_types');
+        });
 
         return $this;
     }
 
-    protected function resolve_id($type, $id = null) {
+    /**
+     * Run actions.
+     * 
+     * Note that this is a good way to ensure that custom actions are run, as 
+     * they will be prefixed with this manager's ID.
+     * 
+     * @param ...mixed $args
+     * @return $this
+     */
+    public function do_action() {
+        $args = func_get_args();
+        $args[0] = $this->format_action_name($args[0]);
+        call_user_func_array('do_action', $args);
+        return $this;
+    }
+
+    /**
+     * Check if a hook should be injected (that is, if it starts with `@`).
+     * 
+     * @param string $hook
+     * @return boolean
+     */
+    protected function should_inject($hook) {
+        return $hook[0] === '@';
+    }
+
+    /**
+     * Prepare a hook's name, prefixing it with this manager's ID if it exists
+     * as a custom action.
+     * 
+     * @param string $hook
+     * @return string
+     */
+    protected function format_action_name($hook) {
+        if ($hook[0] == '@' && in_array($hook, $this->custom_actions)) {
+            return str_replace('@', $this->id . '_', $hook);
+        } elseif (in_array($hook, $this->custom_actions)) {
+            return $this->id . '_' . $hook;
+        } elseif ($hook[0] == '@') {
+            return str_replace('@', '', $hook);
+        }
+        return $hook;
+    }
+
+    /**
+     * Prepare a filter's name.
+     * 
+     * @param string $name
+     * @return string
+     */
+    protected function format_filter_name($name) {
+        if ($name[0] == '@') {
+            return str_replace('@', '', $name);
+        }
+        return $name;
+    }
+
+    /**
+     * Format a component's id.
+     * 
+     * @param string $type
+     * @return string
+     */
+    protected function format_id($type, $id = null) {
         if ($id != null) {
             return "$type#$id";
         }

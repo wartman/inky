@@ -32,11 +32,8 @@ trait OptionsAware {
         return add_option($key, $value, null, 'yes');
     }
 
-    public function register_setting() {
-        register_setting(
-            $this->get_component_id(),
-            $this->get_options_id()
-        );
+    public function register_setting($id) {
+        register_setting($id, $this->get_options_id());
     }
     
     public function add_settings_section($page, $section, $title, $fields) {
@@ -52,28 +49,78 @@ trait OptionsAware {
         }
     }
 
-    // This actually makes things more confusing :V
     public function add_settings_field_for($page, $section, $key, $options) {
         $option = $this->get_options_id();
+        $callback = function () {};
+        
+        if (!isset($options['kind'])) {
+            $options['kind'] = 'text';
+        }
+
+        switch ($options['kind']) {
+            case 'textarea':
+                $callback = function () use ($option, $options, $key) {
+                    $option_name = esc_attr("{$option}[{$key}]");
+                    $value = esc_attr($this->get_option($key, ''));
+                    ?>
+                        <textarea 
+                            name="<?= $option_name ?>"
+                            id="<?= $option_name ?>"
+                        ><?= $value ?></textarea>
+                        <p class="description">
+                            <?= esc_html($options['description']) ?>
+                        </p>
+                    <?php
+                };
+                break;
+            case 'select':
+                $callback = function () use ($option, $options, $key) {
+                    $option_name = esc_attr("{$option}[{$key}]");
+                    $selected = $this->get_option($key);
+                    $values = $this->get_option($options['options'], []);
+                    ?>
+                        <select
+                            name="<?= $option_name ?>" 
+                            id="<?= $option_name ?>"
+                        >
+                            <?php foreach ($values as $value): ?>
+                                <option
+                                    value="<?= esc_attr($value) ?>"
+                                    <?php if ($value === $selected) echo 'selected="selected"' ?>
+                                >
+                                    <?= esc_html($value) ?>
+                                </option>
+                            <?php endforeach ?>
+                        </select>
+                        <p class="description">
+                            <?= esc_html($options['description']) ?>
+                        </p>
+                    <?php
+                };
+                break;
+            default:
+                $callback = function () use ($option, $options, $key) {
+                    $option_name = esc_attr("{$option}[{$key}]");
+                    $value = esc_attr($this->get_option($key, ''));
+                    ?>
+                        <input
+                            class="regular-text"
+                            type="text"
+                            name="<?= $option_name ?>"
+                            id="<?= $option_name ?>"
+                            value="<?= $value ?>"
+                        />
+                        <p class="description">
+                            <?= esc_html($options['description']) ?>
+                        </p>
+                    <?php 
+                };
+        }
+
         add_settings_field(
             "{$page}_{$key}",
             $options['label'],
-            function () use ($option, $options, $key) {
-                $option_name = esc_attr("{$option}[{$key}]");
-                $value = esc_attr($this->get_option($key, ''));
-                ?>
-                    <input
-                        class="regular-text"
-                        type="text"
-                        name="<?= $option_name ?>"
-                        id="<?= $option_name ?>"
-                        value="<?= $value ?>"
-                    />
-                    <p class="description">
-                        <?= esc_html($options['description']) ?>
-                    </p>
-                <?php 
-            },
+            $callback,
             $page,
             $section
         );

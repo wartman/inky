@@ -25,18 +25,25 @@ class OptionsComponent implements Component {
 
     public function register(ComponentManager $manager) {
         $this->initialize();
-        $manager->add_action('init', $this, 'on_init', 5);
-        $manager->add_action('admin_menu', $this, 'add_management_page');
-        $manager->add_filter("sanitize_option_{$this->get_options_id()}", $this, 'filter_options');
+
+        $manager->add_action('init', [ $this, 'on_init' ], 5);
+        $manager->add_action('admin_menu', [ $this, 'add_management_page' ]);
+        $manager->add_filter("@sanitize_option_{$this->get_options_id()}", [ $this, 'filter_options' ]);
     }
 
-    public function filter_options($options) {
+    public function filter_options($options, ComponentManager $manager) {
         $existing = $this->options;
         if (isset($options['new_comic']) && $options['new_comic'] != '') {
             if (!in_array($existing['webcomics'], $options['new_comic'])) {
                 $existing['webcomics'][] = sanitize_text_field($options['new_comic']);
+                $manager->do_action('add_notice', NoticeComponent::GOOD, 'New webcomic created.');
+            } else {
+                $manager->do_action('add_notice', NoticeComponent::ERROR, 'That webcomic already exists.');
             }
         }
+
+        $manager->do_action('add_notice', NoticeComponent::GOOD, 'Options updated');
+
         return [
             'version' => isset($existing['version']) ? $existing['version'] : '0.0.1',
             'webcomics' => isset($existing['webcomics']) ? $existing['webcomics'] : [ 'webcomic' ],
@@ -46,44 +53,15 @@ class OptionsComponent implements Component {
 
     public function add_management_page() {
         $page = "inky_settings";
-        
-        register_setting('inky', $this->get_options_id());
-        add_settings_section(
-            "{$page}_general",
-            'General Settings',
-            function () {},
-            $page
-        );
-
-        add_settings_field(
-            "{$page}_general_primary_webcomic",
-            'Primary Comic',
-            function () {
-                $option = $this->get_options_id();
-                $selected = $this->get_primary_webcomic();
-                ?>
-                    <select
-                        name="<?= $option ?>[primary_webcomic]" 
-                        id="<?= $option ?>[primary_webcomic]"
-                    >
-                        <?php foreach ($this->get_webcomics() as $comic): ?>
-                            <option
-                                value="<?= $comic ?>"
-                                <?php if ($comic === $selected) echo 'selected="selected"' ?>
-                            >
-                                <?= $comic ?>
-                            </option> 
-                        <?php endforeach ?>
-                    </select>
-                    <p class="description">
-                        The default comic. Will be displayed on the main page.
-                    </p>
-                <?php
-            },
-            $page,
-            "{$page}_general"
-        );
-
+        $this->register_setting('inky');
+        $this->add_settings_section($page, 'general', 'General Settings', [
+            'primary_comic' => [
+                'label' => 'Primary Comic',
+                'kind' => 'select',
+                'description' => 'The default comic. Will be displayed on the main page.',
+                'options' => 'webcomics'
+            ]
+        ]);
         add_menu_page(
             'Inky',
             'Inky',

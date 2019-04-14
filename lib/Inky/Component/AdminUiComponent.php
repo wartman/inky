@@ -21,8 +21,8 @@ class AdminUiComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $manager->add_action('init', $this, 'add_scripts');
-        $manager->add_action('enqueue_block_editor_assets', $this, 'enqueue_scripts');
+        $manager->add_action('init', [ $this, 'add_scripts' ]);
+        $manager->add_action('enqueue_block_editor_assets', [ $this, 'enqueue_scripts' ]);
         // todo: css?
     }
 

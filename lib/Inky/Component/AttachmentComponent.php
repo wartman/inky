@@ -27,7 +27,7 @@ class AttachmentComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $manager->add_action('init', $this, 'register_meta');
+        $manager->add_action('init', [ $this, 'register_meta' ]);
     }
 
     public function get_attachment_id(Wp_Post $post) {
