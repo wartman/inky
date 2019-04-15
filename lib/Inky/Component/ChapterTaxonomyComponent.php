@@ -12,11 +12,6 @@ class ChapterTaxonomyComponent implements Component {
         $this->parent = $parent;
     }
 
-    public function get_component_id() {
-        $id = $this->parent->get_component_id();
-        return "$id/chapter";
-    }
-
     public function get_taxonomy_name() {
         $post_type = $this->parent->get_post_type();
         return "inky_{$post_type}_chapter";
@@ -27,12 +22,13 @@ class ChapterTaxonomyComponent implements Component {
     }
 
     public function register_taxonomy() {
+        $name = $this->parent->get_title();
         register_taxonomy(
             $this->get_taxonomy_name(),
             $this->parent->get_post_type(), 
             [
                 'labels' => [
-                    'name' => 'Chapters',
+                    'name' => "$name Chapters",
                     'singular_name' => 'Chapter',
                     'edit_item' => 'Edit Chapter',
                     'view_item' => 'View Chapter',
@@ -49,7 +45,10 @@ class ChapterTaxonomyComponent implements Component {
                 'public' => true,
                 'show_in_rest' => true,
                 'show_admin_column' => true,
-                'hierarchical' => true
+                'hierarchical' => true,
+                'rewrite' => [
+                    'slug' => $this->parent->get_slug() . '_chapter'
+                ]
             ]
         );
     }

@@ -5,7 +5,7 @@ trait OptionsAware {
 
     private $options = [];
 
-    abstract function get_component_id();
+    abstract function get_settings_id();
     abstract function get_options_id();
 
     public function get_option($key, $default = null) {
@@ -32,8 +32,8 @@ trait OptionsAware {
         return add_option($key, $value, null, 'yes');
     }
 
-    public function register_setting($id) {
-        register_setting($id, $this->get_options_id());
+    public function register_setting() {
+        register_setting($this->get_settings_id(), $this->get_options_id());
     }
     
     public function add_settings_section($page, $section, $title, $fields) {

@@ -11,8 +11,8 @@ class OptionsComponent implements Component {
 
     public function __construct() {}
 
-    public function get_component_id() {
-        return null;
+    public function get_settings_id() {
+        return 'inky';
     }
 
     public function get_options_id() {
@@ -31,7 +31,7 @@ class OptionsComponent implements Component {
         $manager->add_filter("@sanitize_option_{$this->get_options_id()}", [ $this, 'filter_options' ]);
     }
 
-    public function filter_options($options, ComponentManager $manager) {
+    public function filter_options(ComponentManager $manager, $options) {
         $existing = $this->options;
         if (isset($options['new_comic']) && $options['new_comic'] != '') {
             if (!in_array($existing['webcomics'], $options['new_comic'])) {
@@ -53,7 +53,7 @@ class OptionsComponent implements Component {
 
     public function add_management_page() {
         $page = "inky_settings";
-        $this->register_setting('inky');
+        $this->register_setting();
         $this->add_settings_section($page, 'general', 'General Settings', [
             'primary_comic' => [
                 'label' => 'Primary Comic',

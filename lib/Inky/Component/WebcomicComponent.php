@@ -5,23 +5,29 @@ use WP_Query;
 use Wp_Post;
 use Inky\Core\Component;
 use Inky\Core\OptionsAware;
+use Inky\Core\HasSubComponents;
 use Inky\Core\ComponentManager;
 
 class WebcomicComponent implements Component {
 
     use OptionsAware;
+    use HasSubComponents;
 
     protected $id;
-    protected $chapters;
-    protected $attachment;
 
     public function __construct($id) {
         $this->id = trim(strtolower($id));
-        $this->chapters = new ChapterTaxonomyComponent($this);
-        $this->attachment = new AttachmentComponent($this);
+    }
+    
+    private function resolve_id(Component $component) {
+        return get_class($component);
     }
 
-    public function get_component_id() {
+    private function allow_component(Component $component) {
+        return true;
+    }
+
+    public function get_settings_id() {
         return $this->id;
     }
 
@@ -47,6 +53,14 @@ class WebcomicComponent implements Component {
         return get_posts($options);
     }
 
+    public function get_chapters() {
+        return $this->get_component(ChapterTaxonomyComponent::class);
+    }
+
+    public function get_attachment() {
+        return $this->get_component(AttachmentComponent::class);
+    }
+
     public function loop(callable $cb) {
         $query = $this->get_query();
         while($query->have_posts()) {
@@ -61,20 +75,20 @@ class WebcomicComponent implements Component {
     }
 
     public function get_attachment_image(Wp_Post $post, $size = 'full') {
-        $id = $this->attachment->get_attachment_id($post);
-        return wp_get_attachment_image($id, $size);
+        return $this->get_attachment()->get_attachment_image($post, $size);
     }
 
     public function register(ComponentManager $manager) {
+        $this->set_manager($manager);
         $this->initialize();
+
+        $this->add_component(new ChapterTaxonomyComponent($this));
+        $this->add_component(new AttachmentComponent($this));
 
         $manager->add_action('@register_post_types', [ $this, 'register_post_type' ]);
         $manager->add_action('admin_menu', [ $this, 'add_management_page' ]);
         $manager->add_action('pre_get_posts', [ $this, 'include_posts' ]);
         $manager->add_filter("@sanitize_option_{$this->get_options_id()}", [ $this, 'filter_options' ]);
-
-        $manager->add_component($this->chapters);
-        $manager->add_component($this->attachment);
     }
 
     public function register_post_type(ComponentManager $manager) {
@@ -107,7 +121,7 @@ class WebcomicComponent implements Component {
             'menu_icon' => 'dashicons-admin-customizer',
             'taxonomies' => [ 
                 'category',
-                $this->chapters->get_taxonomy_name()
+                $this->get_chapters()->get_taxonomy_name()
             ],
             'has_archive' => true,
             'show_in_rest' => true,
@@ -139,7 +153,7 @@ class WebcomicComponent implements Component {
         }
     }
 
-    public function filter_options($options, ComponentManager $manager) {
+    public function filter_options(ComponentManager $manager, $options) {
         $sanatize = function ($key, $def) use ($options) {
             $value = sanitize_text_field($options[$key]);
             if (!$value) {
@@ -162,10 +176,10 @@ class WebcomicComponent implements Component {
     }
 
     public function add_management_page() {
-        $id = $this->get_component_id();
+        $id = $this->get_post_type();
         $page = "{$id}_settings";
 
-        $this->register_setting($id);
+        $this->register_setting();
         $this->add_settings_section($page, 'general', 'General', [
             'title' => [ 
                 'label' => 'Title',
@@ -193,7 +207,7 @@ class WebcomicComponent implements Component {
     }
 
     public function render() {
-        $id = $this->get_component_id();
+        $id = $this->get_post_type();
         ?>
             <div class="wrap">
                 <h2 class="wp-heading-inline"><?= esc_html($this->get_title(), 'inky') ?></h2>

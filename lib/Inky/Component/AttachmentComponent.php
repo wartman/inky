@@ -13,11 +13,6 @@ class AttachmentComponent implements Component {
         $this->parent = $parent;
     }
 
-    public function get_component_id() {
-        $id = $this->parent->get_component_id();
-        return "$id/attachment";
-    }
-
     public function get_meta_key() {
         // $type = $this->parent->get_post_type();
         // return "inky_{$type}_attachment";
@@ -33,6 +28,11 @@ class AttachmentComponent implements Component {
     public function get_attachment_id(Wp_Post $post) {
         $key = $this->get_meta_key();
         return get_post_meta($post->ID, $key, true);
+    }
+
+    public function get_attachment_image(Wp_Post $post, $size = 'full') {
+        $id = $this->get_attachment_id($post);
+        return wp_get_attachment_image($id, $size);
     }
 
     public function register_meta() {

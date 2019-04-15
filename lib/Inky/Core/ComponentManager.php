@@ -27,6 +27,7 @@ class ComponentManager {
 
     public function __construct($id = null) {
         if ($id) $this->id = $id;
+        $this->register_action('@install');
         $this->register_action('@register_post_types');
         $this->register_action('@after_register_post_types');
         $this->register_action('@run');
@@ -51,54 +52,49 @@ class ComponentManager {
      * Note that you cannot add more then one component with the same ID! If 
      * a component already exists, the manager will simply skip adding it.
      *
+     * Look into using SubComponents if you need many similar components
+     * (using the `Inky\Core\HasSubComponents` trait). `Inky\Collection\WebcomicCollection`
+     * is a good example of this in action.
+     * 
      * @param Inky\Core\Component $component
      * @return $this
      */
     public function add_component(Component $component) {
-        $id = $this->format_id(
-            get_class($component), $component->get_component_id()
-        );
+        $class_name = get_class($component);
 
-        if ($this->has_component($id)) {
+        if ($this->has_component($class_name)) {
             return $this;
         }
 
-        $this->components[$id] = $component;
+        $this->components[$class_name] = $component;
         $component->register($this);
         
         return $this;
     }
 
     /**
-     * Get a component by its id.
+     * Get a component by its class name.
      * 
      * @example
-     * 
-     * // Components that use ids:
-     * $manager->get_component(WebcomicComponent::class, 'webcomic');
-     *
-     * // Components that use class names only:
      * $manager->get_component(WebcomicBuilder::class);
      * 
-     * @param string $type
-     * @param string|null $id
+     * @param string $class_name
      * @return Component|null
      */
-    public function get_component($type, $id = null) {
-        $id = $this->format_id($type, $id);
-        return $this->has_component($id) ? $this->components[$id] : null;
+    public function get_component($class_name) {
+        return $this->has_component($class_name) 
+            ? $this->components[$class_name] 
+            : null;
     }
 
     /**
      * Check if a component has been registered.
      *
-     * @param string $id
-     * @param string|null $suffix
+     * @param string $class_name
      * @return bool
      */
-    public function has_component($type, $id = null) {
-        $id = $this->format_id($type, $id);
-        return isset($this->components[$id]);
+    public function has_component($class_name) {
+        return isset($this->components[$class_name]);
     }
 
     /**
@@ -132,7 +128,7 @@ class ComponentManager {
      * 
      * Actions prefixed with `@` are injected actions -- they are run where the normal
      * action would be (unless they are a custom action, registerd with `register_action`), 
-     * but receive an instance of `ComponentManager` as their last argument.
+     * but receive an instance of `ComponentManager` as their _first_ argument.
      *
      * @param string $hook
      * @param Callable $callback
@@ -152,7 +148,7 @@ class ComponentManager {
      *
      * Filters prefixed with `@` are injected filters --They are run where
      * the un-scoped filter would be, but this `ComponentManager` is injected
-     * as the last param.
+     * as the _first_ param.
      * 
      * @param string $name
      * @param Callable $callback
@@ -176,9 +172,9 @@ class ComponentManager {
             if ($action['is_injected']) {
                 add_action($action['hook'], function () use ($callback) {
                     $args = func_get_args();
-                    $args[] = $this;
+                    array_unshift($args, $this);
                     call_user_func_array($callback, $args);
-                }, $action['priority'], $action['accepted_args'] - 1);
+                }, $action['priority'], $action['accepted_args']);
             } else {
                 add_action($action['hook'], $callback, $action['priority'], $action['accepted_args']);
             }
@@ -190,7 +186,7 @@ class ComponentManager {
             if ($filter['is_injected']) {
                 add_filter($filter['name'], function () use ($callback) {
                     $args = func_get_args();
-                    $args[] = $this;
+                    array_unshift($args, $this);
                     return call_user_func_array($callback, $args);
                 });
             } else {
@@ -210,6 +206,8 @@ class ComponentManager {
     public function run() {
         $this->commit();
         
+        $this->do_action('@install');
+
         add_action('init', function () {
             $this->do_action('@run');
             $this->do_action('@register_post_types');

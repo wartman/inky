@@ -12,10 +12,6 @@ class AdminUiComponent implements Component {
         $this->root = $root;
     }
 
-    public function get_component_id() {
-        return null;
-    }
-
     public function get_name($suffix) {
         return "inky-plugin-$suffix";
     }

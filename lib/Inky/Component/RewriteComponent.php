@@ -11,10 +11,6 @@ class RewriteComponent implements Component {
     public function __construct() {
         // noop
     }
-
-    public function get_component_id() {
-        return null;
-    }
         
     public function register(ComponentManager $manager) {
         register_deactivation_hook($manager->get_plugin_file(), [ $this, 'flush' ]);

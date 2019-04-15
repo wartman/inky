@@ -16,10 +16,6 @@ class NoticeComponent implements Component {
         // noop   
     }
 
-    public function get_component_id() {
-        return null;
-    }
-
     public function register(ComponentManager $manager) {
         $manager
             ->register_action('add_notice')
