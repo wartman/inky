@@ -17,17 +17,12 @@ function get_options() {
     return get_component(OptionsComponent::class);
 }
 
-function get_registered_webcomics() {
-    $webcomics = get_options()->get_webcomics();
-    $out = [];
-    foreach ($webcomics as $id) {
-        $out[] = get_webcomic($id);
-    }
-    return $out;
-}
-
 function get_webcomic_collection() {
     return get_component(WebcomicCollection::class);
+}
+
+function get_all_webcomics() {
+    return get_webcomic_collection()->get_all_components();
 }
 
 function get_webcomic($id) {

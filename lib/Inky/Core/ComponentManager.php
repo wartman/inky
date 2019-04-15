@@ -27,7 +27,7 @@ class ComponentManager {
 
     public function __construct($id = null) {
         if ($id) $this->id = $id;
-        $this->register_action('@install');
+        $this->register_action('@setup');
         $this->register_action('@register_post_types');
         $this->register_action('@after_register_post_types');
         $this->register_action('@run');
@@ -206,7 +206,7 @@ class ComponentManager {
     public function run() {
         $this->commit();
         
-        $this->do_action('@install');
+        $this->do_action('@setup');
 
         add_action('init', function () {
             $this->do_action('@run');
@@ -272,19 +272,6 @@ class ComponentManager {
             return str_replace('@', '', $name);
         }
         return $name;
-    }
-
-    /**
-     * Format a component's id.
-     * 
-     * @param string $type
-     * @return string
-     */
-    protected function format_id($type, $id = null) {
-        if ($id != null) {
-            return "$type#$id";
-        }
-        return $type;
     }
 
 }
