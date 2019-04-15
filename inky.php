@@ -1,6 +1,15 @@
 <?php
 /**
- * Plugin Name: Inky: A simple webcomic plugin
+ * Plugin Name: Inky
+ * Plugin URI: https://github.com/wartman/inky
+ * Description: A simple Webcomic plugin
+ * Version: 0.0.1
+ * Author: wartman
+ * Author URI: https://github.com/wartman
+ * License: GPL-2.0+
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * 
+ * @package Inky
  */
 
 require_once __DIR__ . '/lib/Inky/Core/Component.php';
