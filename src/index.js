@@ -1,9 +1,8 @@
+import { registerPlugin } from '@wordpress/plugins'
+import { Fragment } from '@wordpress/element' 
+import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/edit-post'
+import { Panel } from '@wordpress/components'
 import { AttachmentField } from './component/attachment.field'
-
-const { Fragment } = wp.element 
-const { registerPlugin } = wp.plugins
-const { PluginSidebar, PluginSidebarMoreMenuItem } = wp.editPost
-const { Panel } = wp.components
 
 registerPlugin('inky', {
   icon: 'admin-customizer',

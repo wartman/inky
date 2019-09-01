@@ -26,15 +26,7 @@ class AdminUiComponent implements Component {
         wp_register_script(
             $this->get_name('sidebar'),
             plugins_url( 'build/index.js', $this->root ),
-            [ 
-                'wp-editor',
-                'wp-data',
-                'wp-compose',
-                'wp-plugins',
-                'wp-components',
-                'wp-edit-post',
-                'wp-element' 
-            ]
+            json_decode( file_get_contents(plugins_url( 'build/index.deps.json', $this->root ) ))
         );
     }
 

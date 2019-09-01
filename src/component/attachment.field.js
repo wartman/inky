@@ -1,7 +1,7 @@
-const { compose } = wp.compose
-const { withSelect, withDispatch } = wp.data
-const { MediaUpload, MediaUploadCheck } = wp.editor
-const { PanelBody, Button, Spinner, ResponsiveWrapper } = wp.components
+import { compose } from '@wordpress/compose'
+import { withSelect, withDispatch } from '@wordpress/data'
+import { MediaUpload, MediaUploadCheck } from '@wordpress/editor'
+import { PanelBody, Button, Spinner, ResponsiveWrapper } from '@wordpress/components'
 
 const ALLOWED_MEDIA_TYPES = [ 'image' ]
 
