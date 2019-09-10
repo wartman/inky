@@ -14,7 +14,7 @@ class InstallAndTeardownComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $manager->add_action('@setup', [$this, 'install'], 1);
+        $manager->setup->add([$this, 'install']);
     }
     
     public function install(ComponentManager $manager) {

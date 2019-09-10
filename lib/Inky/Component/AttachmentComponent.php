@@ -4,6 +4,7 @@ namespace Inky\Component;
 use Wp_Post;
 use Inky\Core\Component;
 use Inky\Core\ComponentManager;
+use Inky\Core\Action;
 
 class AttachmentComponent implements Component {
 
@@ -22,12 +23,17 @@ class AttachmentComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $manager->add_action('init', [ $this, 'register_meta' ]);
+        $manager->init->add([ $this, 'register_meta' ]);
     }
 
     public function get_attachment_id(Wp_Post $post) {
         $key = $this->get_meta_key();
         return get_post_meta($post->ID, $key, true);
+    }
+
+    public function get_attachment_image_src(Wp_Post $post, $size = 'full') {
+        $id = $this->get_attachment_id($post);
+        return wp_get_attachment_image_src($id, $size, false);
     }
 
     public function get_attachment_image(Wp_Post $post, $size = 'full') {

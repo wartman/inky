@@ -18,19 +18,38 @@ class ComponentManager {
         return $manager;
     }
 
-    protected $custom_actions = [];
+    public $init;
+    public $setup;
+    public $after_setup;
+    public $register_post_types;
+    public $after_register_post_types;
+
     protected $id;
     protected $actions = [];
     protected $filters = [];
     protected $components = [];
-    protected $in_init = false;
 
     public function __construct($id = null) {
         if ($id) $this->id = $id;
-        $this->register_action('@setup');
-        $this->register_action('@register_post_types');
-        $this->register_action('@after_register_post_types');
-        $this->register_action('@run');
+
+        $this->init = new Action('init');
+        $this->add_action($this->init);
+
+        $this->setup = new Action("{$this->id}_setup");
+        $this->setup->inject($this);
+        $this->add_action($this->setup);
+
+        $this->after_setup = new Action("{$this->id}_after_setup");
+        $this->after_setup->inject($this);
+        $this->add_action($this->after_setup);
+
+        $this->register_post_types = new Action("{$this->id}_register_post_types");
+        $this->register_post_types->inject($this);
+        $this->add_action($this->register_post_types);
+
+        $this->after_register_post_types = new Action("{$this->id}_after_register_post_types");
+        $this->after_register_post_types->inject($this);
+        $this->add_action($this->after_register_post_types);
     }
 
     public function set_id($id) {
@@ -97,67 +116,13 @@ class ComponentManager {
         return isset($this->components[$class_name]);
     }
 
-    /**
-     * Register a custom action. 
-     * 
-     * Registered actions will be prefixed with this manager's ID, ensuring there
-     * won't be any conflicts.
-     * 
-     * @param string $name The name of the action.
-     * @param string|false $during The name of the Wordpress action to fire this action during.
-     *                             If `false`, will not be registered and you'll have to fire 
-     *                             it yourself.
-     * @return $this
-     */
-    public function register_action($name, $during = false) {
-        $this->custom_actions[] = $name;
-        if ($during === false) {
-            return $this;
-        }
-        $this->add_action($during, function() use ($name) {
-            $this->do_action($name);
-        });
+    public function add_action(Action $action) {
+        $this->actions[] = $action;
         return $this;
     }
 
-    /** 
-     * Register an action for the given component.
-     *
-     * Actions added this way will NOT be registered with wordpress until
-     * `ComponentManager::run()` is called.
-     * 
-     * Actions prefixed with `@` are injected actions -- they are run where the normal
-     * action would be (unless they are a custom action, registerd with `register_action`), 
-     * but receive an instance of `ComponentManager` as their _first_ argument.
-     *
-     * @param string $hook
-     * @param Callable $callback
-     * @param int $priority
-     * @param int $accepted_args
-     * @return $this
-     */
-    public function add_action($hook, Callable $callback, $priority = 10, $accepted_args = 1) {
-        $is_injected = $this->should_inject($hook);
-        $hook = $this->format_action_name($hook);
-        $this->actions[] = compact('hook', 'callback', 'priority', 'accepted_args', 'is_injected');
-        return $this;
-    }
-
-    /**
-     * Register a filter for the given component.
-     *
-     * Filters prefixed with `@` are injected filters --They are run where
-     * the un-scoped filter would be, but this `ComponentManager` is injected
-     * as the _first_ param.
-     * 
-     * @param string $name
-     * @param Callable $callback
-     * @return $this
-     */
-    public function add_filter($name, Callable $callback) {
-        $is_injected = $this->should_inject($name);
-        $name = $this->format_filter_name($name);
-        $this->filters[] = compact('name', 'callback', 'is_injected');
+    public function add_filter(Filter $filter) {
+        $this->filters[] = $filter;
         return $this;
     }
 
@@ -167,33 +132,14 @@ class ComponentManager {
      * @return $this
      */
     public function commit() {
+
         foreach ($this->actions as $action) {
-            $callback = $action['callback'];
-            if ($action['is_injected']) {
-                add_action($action['hook'], function () use ($callback) {
-                    $args = func_get_args();
-                    array_unshift($args, $this);
-                    call_user_func_array($callback, $args);
-                }, $action['priority'], $action['accepted_args']);
-            } else {
-                add_action($action['hook'], $callback, $action['priority'], $action['accepted_args']);
-            }
+            $action->commit();
         }
-        $this->actions = [];
-        
+
         foreach ($this->filters as $filter) {
-            $callback = $filter['callback'];
-            if ($filter['is_injected']) {
-                add_filter($filter['name'], function () use ($callback) {
-                    $args = func_get_args();
-                    array_unshift($args, $this);
-                    return call_user_func_array($callback, $args);
-                });
-            } else {
-                add_filter($filter['name'], $callback);
-            }
+            $filter->commit();
         }
-        $this->filters = [];
 
         return $this;
     }
@@ -206,72 +152,14 @@ class ComponentManager {
     public function run() {
         $this->commit();
         
-        $this->do_action('@setup');
+        $this->setup->trigger();
 
         add_action('init', function () {
-            $this->do_action('@run');
-            $this->do_action('@register_post_types');
-            $this->do_action('@after_register_post_types');
+            $this->register_post_types->trigger();
+            $this->after_register_post_types->trigger();
         });
 
         return $this;
-    }
-
-    /**
-     * Run actions.
-     * 
-     * Note that this is a good way to ensure that custom actions are run, as 
-     * they will be prefixed with this manager's ID.
-     * 
-     * @param ...mixed $args
-     * @return $this
-     */
-    public function do_action() {
-        $args = func_get_args();
-        $args[0] = $this->format_action_name($args[0]);
-        call_user_func_array('do_action', $args);
-        return $this;
-    }
-
-    /**
-     * Check if a hook should be injected (that is, if it starts with `@`).
-     * 
-     * @param string $hook
-     * @return boolean
-     */
-    protected function should_inject($hook) {
-        return $hook[0] === '@';
-    }
-
-    /**
-     * Prepare a hook's name, prefixing it with this manager's ID if it exists
-     * as a custom action.
-     * 
-     * @param string $hook
-     * @return string
-     */
-    protected function format_action_name($hook) {
-        if ($hook[0] == '@' && in_array($hook, $this->custom_actions)) {
-            return str_replace('@', $this->id . '_', $hook);
-        } elseif (in_array($hook, $this->custom_actions)) {
-            return $this->id . '_' . $hook;
-        } elseif ($hook[0] == '@') {
-            return str_replace('@', '', $hook);
-        }
-        return $hook;
-    }
-
-    /**
-     * Prepare a filter's name.
-     * 
-     * @param string $name
-     * @return string
-     */
-    protected function format_filter_name($name) {
-        if ($name[0] == '@') {
-            return str_replace('@', '', $name);
-        }
-        return $name;
     }
 
 }

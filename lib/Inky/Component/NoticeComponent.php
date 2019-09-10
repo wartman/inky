@@ -3,6 +3,7 @@ namespace Inky\Component;
 
 use Inky\Core\Component;
 use Inky\Core\ComponentManager;
+use Inky\Core\Action;
 
 class NoticeComponent implements Component {
 
@@ -17,10 +18,13 @@ class NoticeComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $manager
-            ->register_action('add_notice')
-            ->add_action('add_notice', [ $this, 'add_notice' ], 10, 2);
-        $manager->add_action('admin_notices', [ $this, 'render' ]);
+        $notice = new Action('add_notice', 10, 2);
+        $notice->add([ $this, 'render' ]);
+        $manager->add_action($notice);
+
+        $admin_notices = new Action('admin_notices');
+        $admin_notices->add([ $this, 'render' ]);
+        $manager->add_action($admin_notices);
     }
 
     public function add_notice($type, $message) {

@@ -7,6 +7,8 @@ use Inky\Core\Component;
 use Inky\Core\OptionsAware;
 use Inky\Core\HasSubComponents;
 use Inky\Core\ComponentManager;
+use Inky\Core\Action;
+use Inky\Core\Filter;
 
 class WebcomicComponent implements Component {
 
@@ -78,6 +80,10 @@ class WebcomicComponent implements Component {
         return $this->get_attachment()->get_attachment_image($post, $size);
     }
 
+    public function get_attachment_image_src(Wp_Post $post, $size = 'full') {
+        return $this->get_attachment()->get_attachment_image_src($post, $size);
+    }
+
     public function register(ComponentManager $manager) {
         $this->set_manager($manager);
         $this->initialize();
@@ -85,10 +91,21 @@ class WebcomicComponent implements Component {
         $this->add_component(new ChapterTaxonomyComponent($this));
         $this->add_component(new AttachmentComponent($this));
 
-        $manager->add_action('@register_post_types', [ $this, 'register_post_type' ]);
-        $manager->add_action('admin_menu', [ $this, 'add_management_page' ]);
-        $manager->add_action('pre_get_posts', [ $this, 'include_posts' ]);
-        $manager->add_filter("@sanitize_option_{$this->get_options_id()}", [ $this, 'filter_options' ]);
+        $manager->register_post_types->add([ $this, 'register_post_type' ]);
+        
+        $menu = new Action('admin_menu');
+        $menu->add([ $this, 'add_management_page' ]);
+        $manager->add_action($menu);
+
+        $pre = new Action('pre_get_posts');
+        $pre->add([ $this, 'include_posts' ]);
+        $manager->add_action($pre);
+
+        $sanitize = new Filter("sanitize_option_{$this->get_options_id()}");
+        $sanitize
+            ->inject($manager)
+            ->add([ $this, 'filter_options' ]);
+        $manager->add_filter($sanitize);
     }
 
     public function register_post_type(ComponentManager $manager) {

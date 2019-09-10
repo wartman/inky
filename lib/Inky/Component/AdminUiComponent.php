@@ -3,6 +3,7 @@ namespace Inky\Component;
 
 use Inky\Core\Component;
 use Inky\Core\ComponentManager;
+use Inky\Core\Action;
 
 class AdminUiComponent implements Component {
 
@@ -17,8 +18,12 @@ class AdminUiComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $manager->add_action('init', [ $this, 'add_scripts' ]);
-        $manager->add_action('enqueue_block_editor_assets', [ $this, 'enqueue_scripts' ]);
+        $manager->init->add([ $this, 'add_scripts' ]);
+        
+        $enq = new Action('enqueue_block_editor_assets');
+        $enq->add([ $this, 'enqueue_scripts' ]);
+        $manager->add_action($enq);
+
         // todo: css?
     }
 

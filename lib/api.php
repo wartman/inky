@@ -33,7 +33,14 @@ function get_active_webcomic() {
     return get_webcomic_collection()->get_active_webcomic();
 }
 
-function is_webcomic($id) {
+function is_webcomic($id = null) {
+    if ($id == null) {
+        $id = get_post_type();
+    }
+    return get_webcomic($id) != null; 
+}
+
+function is_webcomic_post($id) {
     $webcomic = get_webcomic($id);
     if ($webcomic == null) { 
         return false;

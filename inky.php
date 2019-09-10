@@ -12,6 +12,8 @@
  * @package Inky
  */
 
+require_once __DIR__ . '/lib/Inky/Core/Filter.php';
+require_once __DIR__ . '/lib/Inky/Core/Action.php';
 require_once __DIR__ . '/lib/Inky/Core/Component.php';
 require_once __DIR__ . '/lib/Inky/Core/OptionsAware.php';
 require_once __DIR__ . '/lib/Inky/Core/HasSubComponents.php';

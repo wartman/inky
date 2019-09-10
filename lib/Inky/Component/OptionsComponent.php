@@ -4,6 +4,8 @@ namespace Inky\Component;
 use Inky\Core\Component;
 use Inky\Core\ComponentManager;
 use Inky\Core\OptionsAware;
+use Inky\Core\Action;
+use Inky\Core\Filter;
 
 class OptionsComponent implements Component {
 
@@ -26,9 +28,17 @@ class OptionsComponent implements Component {
     public function register(ComponentManager $manager) {
         $this->initialize();
 
-        $manager->add_action('init', [ $this, 'on_init' ], 5);
-        $manager->add_action('admin_menu', [ $this, 'add_management_page' ]);
-        $manager->add_filter("@sanitize_option_{$this->get_options_id()}", [ $this, 'filter_options' ]);
+        $manager->init->add([ $this, 'on_init' ]);
+
+        $menu = new Action('admin_menu');
+        $menu->add([ $this, 'add_management_page' ]);
+        $manager->add_action($menu);
+
+        $sanatize = new Filter("sanitize_option_{$this->get_options_id()}");
+        $sanatize
+            ->inject($manager)
+            ->add([ $this, 'filter_options' ]);
+        $manager->add_filter($sanatize);
     }
 
     public function filter_options(ComponentManager $manager, $options) {

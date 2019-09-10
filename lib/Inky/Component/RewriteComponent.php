@@ -3,6 +3,7 @@ namespace Inky\Component;
 
 use Inky\Core\Component;
 use Inky\Core\ComponentManager;
+use Inky\Core\Action;
 
 class RewriteComponent implements Component {
 
@@ -14,10 +15,13 @@ class RewriteComponent implements Component {
         
     public function register(ComponentManager $manager) {
         register_deactivation_hook($manager->get_plugin_file(), [ $this, 'flush' ]);
-    
-        $manager->register_action('request_rewrite');
-        $manager->add_action('request_rewrite', [$this, 'request_rewrite'], 10, 0);
-        $manager->add_action('@after_register_post_types', [ $this, 'maybe_flush_rewrite_rules' ]);
+
+        $request = new Action('request_rewrite', 10, 0);
+        $request->add([$this, 'request_rewrite']);
+        $manager->add_action($request);
+        
+        $manager->after_register_post_types
+            ->add([ $this, 'maybe_flush_rewrite_rules' ]);
     }
         
     public function request_rewrite() {
