@@ -132,7 +132,6 @@ class ComponentManager {
      * @return $this
      */
     public function commit() {
-
         foreach ($this->actions as $action) {
             $action->commit();
         }

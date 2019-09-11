@@ -17,6 +17,11 @@ class ChapterTaxonomyComponent implements Component {
         return "inky_{$post_type}_chapter";
     }
 
+    public function get_terms($post, $args = []) {
+        $name = $this->get_taxonomy_name();
+        return wp_get_post_terms(get_post($post)->ID, $name, $args);
+    }
+
     public function register(ComponentManager $manager) {
         $manager->init->add([ $this, 'register_taxonomy' ]);
     }
