@@ -18,10 +18,6 @@ class NoticeComponent implements Component {
     }
 
     public function register(ComponentManager $manager) {
-        $notice = new Action('add_notice', 10, 2);
-        $notice->add([ $this, 'render' ]);
-        $manager->add_action($notice);
-
         $admin_notices = new Action('admin_notices');
         $admin_notices->add([ $this, 'render' ]);
         $manager->add_action($admin_notices);

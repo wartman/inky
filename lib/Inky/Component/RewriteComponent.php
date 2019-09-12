@@ -34,7 +34,8 @@ class RewriteComponent implements Component {
         }
         delete_transient(self::REWRITE_TRANSIENT);
         $this->flush();
-        $manager->do_action('add_notice', NoticeComponent::SUCCESS, 'Rewrite rules flushed');
+        $manager->get_component(NoticeComponent::class)
+            ->add_notice(NoticeComponent::SUCCESS, 'Rewrite rules flushed');
     }
     
     public function flush() {

@@ -187,7 +187,8 @@ class WebcomicComponent implements Component {
             $manager->do_action('request_rewrite');
         }
 
-        $manager->do_action('add_notice', NoticeComponent::SUCCESS, "$title options updated");
+        $manager->get_component(NoticeComponent::class)
+            ->add_notice(NoticeComponent::SUCCESS, "$title options updated");
 
         return compact('title', 'description', 'slug');
     }

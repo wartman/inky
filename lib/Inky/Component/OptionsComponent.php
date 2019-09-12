@@ -43,16 +43,18 @@ class OptionsComponent implements Component {
 
     public function filter_options(ComponentManager $manager, $options) {
         $existing = $this->options;
+        $notices = $manager->get_component(NoticeComponent::class);
+        
         if (isset($options['new_comic']) && $options['new_comic'] != '') {
             if (!in_array($existing['webcomics'], $options['new_comic'])) {
                 $existing['webcomics'][] = sanitize_text_field($options['new_comic']);
-                $manager->do_action('add_notice', NoticeComponent::GOOD, 'New webcomic created.');
+                $notices->add_notice(NoticeComponent::SUCCESS, 'New webcomic created.');
             } else {
-                $manager->do_action('add_notice', NoticeComponent::ERROR, 'That webcomic already exists.');
+                $notices->add_notice(NoticeComponent::ERROR, 'That webcomic already exists.');
             }
         }
 
-        $manager->do_action('add_notice', NoticeComponent::GOOD, 'Options updated');
+        $notices->add_notice(NoticeComponent::SUCCESS, 'Options updated');
 
         return [
             'version' => isset($existing['version']) ? $existing['version'] : '0.0.1',

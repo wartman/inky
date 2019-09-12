@@ -20,6 +20,7 @@ class InstallAndTeardownComponent implements Component {
     public function install(ComponentManager $manager) {
         register_activation_hook($this->plugin_file, function () use ($manager) {
             $options = $manager->get_component(OptionsComponent::class);
+            $notices = $manager->get_component(NoticeComponent::class);
             if (!$options->is_installed()) {
                 $options->set_option('version', '0.0.1');
                 $options->set_option('webcomics', [ 'webcomic' ]);
@@ -33,13 +34,11 @@ class InstallAndTeardownComponent implements Component {
                 $primary_webcomic->commit();
 
                 $manager->get_component(WebcomicCollection::class)
-                    ->add($primary_webcomic);
+                    ->add_component($primary_webcomic);
 
-                $manager->get_component(NoticeComponent::class)
-                    ->add_notice(NoticeComponent::INFO, 'Inky installed');
+                $notices->add_notice(NoticeComponent::INFO, 'Inky installed');
             } else {
-                $manager->get_component(NoticeComponent::class)
-                    ->add_notice(NoticeComponent::INFO, 'Inky activated');
+                $notices->add_notice(NoticeComponent::INFO, 'Inky activated');
             }
         });
     }
