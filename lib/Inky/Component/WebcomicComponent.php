@@ -197,7 +197,8 @@ class WebcomicComponent implements Component {
         $slug = $sanatize('slug', $this->get_post_type());
 
         if ($slug != $this->get_slug()) {
-            $manager->do_action('request_rewrite');
+            $manager->get_component(RewriteComponent::class)
+                ->request_rewrite();
         }
 
         $manager->get_component(NoticeComponent::class)

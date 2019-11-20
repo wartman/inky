@@ -21,6 +21,10 @@ class OptionsComponent implements Component {
         return 'inky';
     }
 
+    public function get_page_name() {
+        return 'inky_settings';
+    }
+
     public function is_installed() {
         return $this->get_option('version', null) != null;
     }
@@ -28,7 +32,7 @@ class OptionsComponent implements Component {
     public function register(ComponentManager $manager) {
         $this->initialize();
 
-        $manager->init->add([ $this, 'on_init' ]);
+        // $manager->init->add([ $this, 'on_init' ]);
 
         $menu = new Action('admin_menu');
         $menu->add([ $this, 'add_management_page' ]);
@@ -64,7 +68,7 @@ class OptionsComponent implements Component {
     }
 
     public function add_management_page() {
-        $page = "inky_settings";
+        $page = $this->get_page_name();
         $this->register_setting();
         $this->add_settings_section($page, 'general', 'General Settings', [
             'primary_comic' => [

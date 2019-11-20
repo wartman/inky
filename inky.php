@@ -27,6 +27,8 @@ require_once __DIR__ . '/lib/Inky/Component/RewriteComponent.php';
 require_once __DIR__ . '/lib/Inky/Component/AttachmentComponent.php';
 require_once __DIR__ . '/lib/Inky/Component/ChapterTaxonomyComponent.php';
 require_once __DIR__ . '/lib/Inky/Component/WebcomicComponent.php';
+require_once __DIR__ . '/lib/Inky/Component/WebcomicComponent.php';
+require_once __DIR__ . '/lib/Inky/Component/WebcomicPageGeneratorComponent.php';
 
 require_once __DIR__ . '/lib/Inky/Collection/WebcomicCollection.php';
 
@@ -39,6 +41,7 @@ use Inky\Component\OptionsComponent;
 use Inky\Component\NoticeComponent;
 use Inky\Component\RewriteComponent;
 use Inky\Component\AdminUiComponent;
+use Inky\Component\WebcomicPageGeneratorComponent;
 
 $manager = ComponentManager::get_instance();
 $manager->add_component(new OptionsComponent());
@@ -47,4 +50,5 @@ $manager->add_component(new InstallAndTeardownComponent(__FILE__));
 $manager->add_component(new RewriteComponent());
 $manager->add_component(new WebcomicCollection());
 $manager->add_component(new AdminUiComponent(__FILE__));
+$manager->add_component(new WebcomicPageGeneratorComponent());
 $manager->run();

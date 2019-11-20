@@ -22,7 +22,7 @@ trait OptionsAware {
     public function initialize() {
         $this->options = get_option($this->get_options_id());
     }
-
+    
     public function commit() {
         $key = $this->get_options_id();
         $value = $this->options;
