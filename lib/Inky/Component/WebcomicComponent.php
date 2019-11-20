@@ -42,7 +42,7 @@ class WebcomicComponent implements Component {
     }
 
     public function get_post_type_object() {
-        return get_post_type($this->get_post_type());
+        return get_post_type_object($this->get_post_type());
     }
 
     public function get_query(array $options) {
@@ -57,6 +57,19 @@ class WebcomicComponent implements Component {
 
     public function get_chapters() {
         return $this->get_component(ChapterTaxonomyComponent::class);
+    }
+
+    /**
+     * Check if a given taxonomy name is this webcomic's
+     * chapter.
+     * 
+     * @param string $tax_name
+     * @return boolean
+     */
+    public function is_webcomic_chapter($tax_name) {
+        return $this
+            ->get_component(ChapterTaxonomyComponent::class)
+            ->get_taxonomy_name() === $tax_name;
     }
 
     public function get_attachment() {

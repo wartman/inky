@@ -37,6 +37,36 @@ class WebcomicCollection implements Component {
         $this->active_webcomic = $id;
     }
 
+    /**
+     * Check if a given taxonomy name belongs to any registered
+     * webcomic
+     * 
+     * @param string $tax_name
+     * @return boolean
+     */
+    public function is_webcomic_chapter($tax_name) {
+        foreach ($this->get_all_components() as $component) {
+            if ($component->is_webcomic_chapter($tax_name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get a webcomic for a given taxonomy.
+     * 
+     * @param string $tax_name
+     * @return Inky\Component\WebcomicComponent
+     */
+    public function get_webcomic_for_chapter($tax_name) {
+        foreach ($this->get_all_components() as $component) {
+            if ($component->is_webcomic_chapter($tax_name)) {
+                return $component;
+            }
+        }
+    }
+
     private function build(ComponentManager $manager) {
         $options = $manager->get_component(OptionsComponent::class);
         $webcomics = $options->get_option('webcomics', []);

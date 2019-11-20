@@ -11,7 +11,6 @@ export const AttachmentField = compose(
     const { getMedia } = select('core')
     const { getEditedPostAttribute } = select('core/editor')
     const meta = getEditedPostAttribute('meta')
-    console.log(meta)
     const imageId = meta ? meta[props.metaKey] : null
     return {
       media: imageId ? getMedia(imageId) : null,
