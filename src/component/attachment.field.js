@@ -1,6 +1,6 @@
 import { compose } from '@wordpress/compose'
 import { withSelect, withDispatch } from '@wordpress/data'
-import { MediaUpload, MediaUploadCheck } from '@wordpress/editor'
+import { MediaUpload, MediaUploadCheck } from '@wordpress/block-editor'
 import { PanelBody, Button, Spinner, ResponsiveWrapper } from '@wordpress/components'
 
 const ALLOWED_MEDIA_TYPES = [ 'image' ]
